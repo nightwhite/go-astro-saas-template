@@ -1,0 +1,120 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-api
+spec:
+  replicas: {{ .Values.api.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-api
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-api
+    spec:
+      serviceAccountName: {{ default (default .Release.Name .Values.global.serviceAccountName) .Values.api.serviceAccountName }}
+      containers:
+        - name: api
+          image: {{ .Values.api.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+          env:
+            - name: APP_NAME
+              value: {{ .Values.env.appName | quote }}
+            - name: APP_ENV
+              value: {{ .Values.env.appEnv | quote }}
+            - name: APP_HOST
+              value: {{ .Values.env.appHost | quote }}
+            - name: APP_BASE_URL
+              value: {{ .Values.env.appBaseURL | quote }}
+            - name: APP_WEB_ORIGIN
+              value: {{ .Values.env.webOrigin | quote }}
+            - name: SESSION_SECURE
+              value: {{ .Values.env.sessionSecure | quote }}
+            - name: SESSION_COOKIE_NAME
+              value: {{ .Values.env.sessionCookieName | quote }}
+            - name: JOBS_DEFAULT_QUEUE
+              value: {{ .Values.env.jobsDefaultQueue | quote }}
+            - name: JOBS_CRITICAL_QUEUE
+              value: {{ .Values.env.jobsCriticalQueue | quote }}
+            - name: JOBS_QUEUE_PREFIX
+              value: {{ .Values.env.jobsQueuePrefix | quote }}
+            - name: SECURITY_ENABLE_PPROF
+              value: {{ .Values.env.securityEnablePprof | quote }}
+            - name: POSTGRES_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: postgresDsn
+            - name: REDIS_ADDR
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: redisAddr
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: redisPassword
+            - name: SMTP_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: smtpHost
+            - name: SMTP_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: smtpUsername
+            - name: SMTP_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: smtpPassword
+            - name: R2_ACCOUNT_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: r2AccountId
+            - name: R2_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: r2AccessKeyId
+            - name: R2_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: r2SecretAccessKey
+            - name: R2_BUCKET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: r2Bucket
+            - name: R2_ENDPOINT
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: r2Endpoint
+            - name: R2_PUBLIC_BASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: r2PublicBaseUrl
+          resources:
+{{ toYaml .Values.api.resources | indent 12 }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            failureThreshold: 20
+            periodSeconds: 3

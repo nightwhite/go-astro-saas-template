@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.astro/
+.DS_Store
+coverage/
+tmp/
+.env
+.env.local
+apps/web/node_modules/
+packages/ui/node_modules/
+apps/web/dist/
+apps/api/bin/
+apps/api/.devstack/
+apps/api/.devstack-check/
+apps/web/test-results/
+reference/
+helloagents/

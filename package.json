@@ -1,0 +1,17 @@
+{
+  "name": "go-astro-template",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "apps/web",
+    "packages/ui"
+  ],
+  "scripts": {
+    "dev": "sh scripts/dev.sh",
+    "dev:web": "npm run dev -w apps/web",
+    "build:web": "npm run build -w apps/web",
+    "check:web": "npm run check -w apps/web",
+    "build:ui": "npm run build -w packages/ui",
+    "build": "npm run build:ui && npm run build:web"
+  }
+}

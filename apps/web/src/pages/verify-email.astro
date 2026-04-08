@@ -1,0 +1,251 @@
+---
+import AppShellLayout from "../layouts/AppShellLayout.astro";
+import { t } from "@/lib/i18n";
+import { resolveServerLocale } from "@/lib/locale";
+const token = Astro.url.searchParams.get("token") || "";
+const locale = resolveServerLocale(Astro.request);
+const m = t(locale);
+const apiBaseURL = "";
+---
+
+<AppShellLayout title={m.common.verifyEmail} locale={locale} renderFooter={false}>
+  <div class="container mx-auto flex min-h-[calc(100svh-4rem)] px-4 py-12">
+    <div class="mx-auto flex w-full max-w-sm flex-col justify-center gap-6">
+      <div class="rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm">
+        <h1 class="text-2xl font-semibold tracking-tight text-foreground">{m.auth.verifyTitle}</h1>
+        <p class="mt-2 text-sm text-muted-foreground">
+          {token
+            ? `${m.auth.verifyDescription} ${m.auth.needVerificationCode}`
+            : m.auth.verifyDescription}
+        </p>
+        <form class="mt-4 space-y-4" data-role="confirm-form">
+          <label class="block">
+            <span class="mb-2 block text-sm font-medium text-foreground">{m.auth.email}</span>
+            <input
+              class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
+              type="email"
+              name="email"
+              placeholder="name@example.com"
+              required
+            />
+          </label>
+
+          <label class="block">
+            <span class="mb-2 block text-sm font-medium text-foreground">{m.auth.verificationCode}</span>
+            <input
+              class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
+              type="text"
+              name="code"
+              placeholder="000000"
+              value={token || undefined}
+              required
+            />
+          </label>
+
+          <p class="hidden text-sm text-destructive" data-role="error"></p>
+          <p class="hidden text-sm text-emerald-600" data-role="success"></p>
+
+          <button class="h-10 w-full rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90" type="submit">
+            {m.auth.confirmEmail}
+          </button>
+        </form>
+
+        <div class="mt-5 border-t border-border pt-5">
+          <p class="text-sm text-muted-foreground">{m.auth.needVerificationCode}</p>
+          <form class="mt-3 space-y-3" data-role="request-form">
+            <label class="block">
+              <span class="mb-2 block text-sm font-medium text-foreground">{m.auth.email}</span>
+              <input
+                class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
+                type="email"
+                name="email"
+                placeholder="name@example.com"
+                required
+              />
+            </label>
+            <button class="h-10 w-full rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground" type="submit">
+              {m.auth.requestCode}
+            </button>
+          </form>
+        </div>
+
+        <div class="mt-5 text-sm text-muted-foreground">
+          <a href="/sign-in" class="underline underline-offset-4 hover:text-foreground">{m.common.backToSignIn}</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</AppShellLayout>
+
+<script is:inline define:vars={{ apiBaseURL, token, verifyFailed: m.auth.verificationFailed, verifyCsrfBlocked: m.auth.verifyCsrfBlockedHint, verifySuccess: m.auth.verifyEmailSuccess, verifySuccessHint: m.auth.verifyEmailSuccessHint, requestVerificationFailed: m.auth.requestVerificationFailed, requestCsrfBlocked: m.auth.requestCsrfBlockedHint, verificationCodeSent: m.auth.verificationCodeSentDevHint }}>
+  const confirmForm = document.querySelector("form[data-role='confirm-form']");
+  const requestForm = document.querySelector("form[data-role='request-form']");
+
+  function getCookie(name) {
+    const encoded = `${encodeURIComponent(name)}=`;
+    const parts = document.cookie.split("; ");
+    for (const part of parts) {
+      if (part.startsWith(encoded)) {
+        return decodeURIComponent(part.slice(encoded.length));
+      }
+    }
+    return null;
+  }
+
+  async function ensureCSRFToken() {
+    const cookieName = "go_astro_csrf";
+    const existing = getCookie(cookieName);
+    if (existing) return existing;
+
+    const resp = await fetch(`/api/v1/auth/csrf`, {
+      method: "GET",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!resp.ok) return null;
+    const body = await resp.json().catch(() => null);
+    return body?.data?.token || getCookie(cookieName);
+  }
+
+  function randomUUID() {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+    const bytes = new Uint8Array(16);
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+
+  function buildIdempotencyKey() {
+    return `web_${randomUUID()}`;
+  }
+
+  function setMessage(form, role, message) {
+    const el = form?.querySelector(`[data-role='${role}']`);
+    if (!(el instanceof HTMLElement)) return;
+    el.textContent = message || "";
+    el.classList.toggle("hidden", !message);
+  }
+
+  function setBusy(form, busy) {
+    const btn = form?.querySelector("button[type='submit']");
+    if (btn instanceof HTMLButtonElement) {
+      btn.disabled = Boolean(busy);
+      btn.dataset.busy = busy ? "true" : "false";
+    }
+  }
+
+  function syncEmail(fromForm, toForm) {
+    const from = fromForm?.querySelector("input[name='email']");
+    const to = toForm?.querySelector("input[name='email']");
+    if (from instanceof HTMLInputElement && to instanceof HTMLInputElement && from.value && !to.value) {
+      to.value = from.value;
+    }
+  }
+
+  if (confirmForm instanceof HTMLFormElement && requestForm instanceof HTMLFormElement) {
+    const tokenInput = confirmForm.querySelector("input[name='code']");
+    if (tokenInput instanceof HTMLInputElement && token && !tokenInput.value.trim()) {
+      tokenInput.value = token;
+    }
+
+    const emailInput = confirmForm.querySelector("input[name='email']");
+
+    confirmForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setMessage(confirmForm, "error", "");
+      setMessage(confirmForm, "success", "");
+      syncEmail(confirmForm, requestForm);
+      setBusy(confirmForm, true);
+
+      const formData = new FormData(confirmForm);
+      const payload = {
+        email: String(formData.get("email") || ""),
+        code: String(formData.get("code") || token || ""),
+        captcha_token: "dev-pass",
+      };
+
+      try {
+      const csrfToken = await ensureCSRFToken();
+      if (!csrfToken) throw new Error(verifyCsrfBlocked || "Verification blocked by CSRF. Refresh page and retry.");
+
+        const res = await fetch(`${apiBaseURL}/api/v1/auth/confirm-email`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken,
+            "X-Tenant-ID": "default",
+            "Idempotency-Key": buildIdempotencyKey(),
+          },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          const message = body?.error?.message || verifyFailed || "Verification failed";
+          if (String(message).toLowerCase().includes("missing csrf token")) {
+            throw new Error(verifyCsrfBlocked || "Verification blocked by CSRF. Refresh page and retry.");
+          }
+          throw new Error(message);
+        }
+        setMessage(confirmForm, "success", `${verifySuccess || "Email verified."} ${verifySuccessHint || "You can sign in now."}`.trim());
+        window.setTimeout(() => {
+          window.location.href = "/sign-in";
+        }, 600);
+      } catch (err) {
+        setMessage(confirmForm, "error", err instanceof Error ? err.message : verifyFailed || "Verification failed");
+      } finally {
+        setBusy(confirmForm, false);
+      }
+    });
+
+    requestForm.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      setMessage(confirmForm, "error", "");
+      setMessage(confirmForm, "success", "");
+      syncEmail(requestForm, confirmForm);
+      setBusy(requestForm, true);
+
+      const formData = new FormData(requestForm);
+      const payload = {
+        email: String(formData.get("email") || ""),
+        captcha_token: "dev-pass",
+      };
+
+      try {
+        const csrfToken = await ensureCSRFToken();
+        if (!csrfToken) throw new Error(requestCsrfBlocked || "Request blocked by CSRF. Refresh page and retry.");
+
+        const res = await fetch(`${apiBaseURL}/api/v1/auth/resend-verification`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken,
+            "X-Tenant-ID": "default",
+            "Idempotency-Key": buildIdempotencyKey(),
+          },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+        if (!res.ok) {
+          const body = await res.json().catch(() => null);
+          const message = body?.error?.message || requestVerificationFailed || "Failed to request verification code";
+          if (String(message).toLowerCase().includes("missing csrf token")) {
+            throw new Error(requestCsrfBlocked || "Request blocked by CSRF. Refresh page and retry.");
+          }
+          throw new Error(message);
+        }
+        setMessage(confirmForm, "success", verificationCodeSent || "Verification code sent.");
+      } catch (err) {
+        setMessage(confirmForm, "error", err instanceof Error ? err.message : requestVerificationFailed || "Failed to request verification code");
+      } finally {
+        setBusy(requestForm, false);
+      }
+    });
+
+    if (token && emailInput instanceof HTMLInputElement && tokenInput instanceof HTMLInputElement && !tokenInput.value.trim()) {
+      tokenInput.value = token;
+    }
+  }
+</script>

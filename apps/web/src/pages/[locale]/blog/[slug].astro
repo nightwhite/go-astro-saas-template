@@ -1,0 +1,15 @@
+---
+import { defaultLocale, isLocale } from "@/lib/i18n";
+
+export const prerender = false;
+
+const localeParam = String(Astro.params.locale ?? "").toLowerCase();
+const slug = String(Astro.params.slug ?? "").trim();
+if (!isLocale(localeParam) || localeParam === defaultLocale || !slug) {
+  return new Response("Not Found", { status: 404 });
+}
+
+return Astro.redirect(
+  `/api/locale?locale=${encodeURIComponent(localeParam)}&redirect=${encodeURIComponent(`/blog/${slug}`)}`,
+);
+---

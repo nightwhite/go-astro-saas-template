@@ -1,0 +1,45 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Release.Name }}-worker
+spec:
+  replicas: {{ .Values.worker.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .Release.Name }}-worker
+  template:
+    metadata:
+      labels:
+        app: {{ .Release.Name }}-worker
+    spec:
+      serviceAccountName: {{ default (default .Release.Name .Values.global.serviceAccountName) .Values.worker.serviceAccountName }}
+      containers:
+        - name: worker
+          image: {{ .Values.worker.image }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: APP_ENV
+              value: {{ .Values.env.appEnv | quote }}
+            - name: JOBS_DEFAULT_QUEUE
+              value: {{ .Values.env.jobsDefaultQueue | quote }}
+            - name: JOBS_CRITICAL_QUEUE
+              value: {{ .Values.env.jobsCriticalQueue | quote }}
+            - name: JOBS_QUEUE_PREFIX
+              value: {{ .Values.env.jobsQueuePrefix | quote }}
+            - name: POSTGRES_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: postgresDsn
+            - name: REDIS_ADDR
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: redisAddr
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Release.Name }}-secrets
+                  key: redisPassword
+          resources:
+{{ toYaml .Values.worker.resources | indent 12 }}

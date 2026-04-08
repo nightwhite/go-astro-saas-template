@@ -1,0 +1,36 @@
+---
+import AppShellLayout from "../layouts/AppShellLayout.astro";
+import { t } from "@/lib/i18n";
+import { resolveServerLocale } from "@/lib/locale";
+
+const locale = resolveServerLocale(Astro.request);
+const m = t(locale);
+---
+
+<AppShellLayout title={m.legal.termsTitle} locale={locale}>
+  <div class="page-shell py-10">
+    <div class="mx-auto max-w-3xl">
+      <h1 class="text-3xl font-bold text-foreground">{m.legal.termsTitle}</h1>
+      <p class="mt-2 text-sm text-muted-foreground">{m.legal.lastUpdated}: {new Date().toLocaleDateString()}</p>
+      <p class="mt-4 text-base leading-relaxed text-muted-foreground">{m.legal.termsIntro}</p>
+
+      <div class="mt-8 space-y-8">
+        {m.legal.termsSections.map((section) => (
+          <section>
+            <h2 class="mb-3 text-2xl font-semibold text-foreground">{section.title}</h2>
+            <p class="leading-7 text-muted-foreground">{section.body}</p>
+          </section>
+        ))}
+      </div>
+
+      <div class="mt-10">
+        <a
+          href="/"
+          class="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground"
+        >
+          {m.legal.returnHome}
+        </a>
+      </div>
+    </div>
+  </div>
+</AppShellLayout>

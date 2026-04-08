@@ -1,0 +1,21 @@
+env:
+  appEnv: staging
+  appBaseURL: https://staging.template.local
+  webOrigin: https://staging.template.local
+  securityEnablePprof: true
+
+api:
+  replicas: 2
+  maxReplicas: 4
+  autoscaling:
+    targetCPUUtilizationPercentage: 65
+
+web:
+  replicas: 2
+  autoscaling:
+    enabled: false
+
+worker:
+  replicas: 1
+  autoscaling:
+    enabled: false

@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: template-api
+  namespace: go-astro-template
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: template-api
+  template:
+    metadata:
+      labels:
+        app: template-api
+    spec:
+      containers:
+        - name: api
+          image: ghcr.io/example/go-astro-template-api:latest
+          ports:
+            - containerPort: 8080
+          env:
+            - name: APP_ENV
+              value: production
+            - name: APP_BASE_URL
+              value: https://template.local
+            - name: APP_WEB_ORIGIN
+              value: https://template.local
+            - name: POSTGRES_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: template-secrets
+                  key: postgresDsn
+            - name: REDIS_ADDR
+              valueFrom:
+                secretKeyRef:
+                  name: template-secrets
+                  key: redisAddr
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: template-secrets
+                  key: redisPassword
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: 8080
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: 8080
+            failureThreshold: 20
+            periodSeconds: 3

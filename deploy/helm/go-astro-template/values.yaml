@@ -1,0 +1,93 @@
+global:
+  serviceAccountName: ""
+
+api:
+  image: ghcr.io/example/go-astro-template-api:latest
+  replicas: 2
+  maxReplicas: 6
+  serviceAccountName: ""
+  service:
+    port: 8080
+  autoscaling:
+    targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    minAvailable: 1
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 1000m
+      memory: 512Mi
+
+web:
+  image: ghcr.io/example/go-astro-template-web:latest
+  replicas: 2
+  serviceAccountName: ""
+  service:
+    port: 4321
+  autoscaling:
+    enabled: false
+    targetCPUUtilizationPercentage: 70
+  podDisruptionBudget:
+    minAvailable: 1
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+worker:
+  image: ghcr.io/example/go-astro-template-worker:latest
+  replicas: 2
+  serviceAccountName: ""
+  podDisruptionBudget:
+    minAvailable: 1
+  autoscaling:
+    enabled: false
+    targetCPUUtilizationPercentage: 70
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 500m
+      memory: 256Mi
+
+ingress:
+  enabled: true
+  host: template.local
+  className: ""
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: "8m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "30"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "30"
+
+env:
+  appEnv: production
+  appBaseURL: https://template.local
+  webOrigin: https://template.local
+  appName: go-astro-template
+  appHost: 0.0.0.0
+  sessionSecure: true
+  sessionCookieName: go_astro_session
+  jobsDefaultQueue: default
+  jobsCriticalQueue: critical
+  jobsQueuePrefix: go_astro_template
+  securityEnablePprof: false
+
+secrets:
+  postgresDsn: ""
+  redisAddr: ""
+  redisPassword: ""
+  smtpHost: ""
+  smtpUsername: ""
+  smtpPassword: ""
+  r2AccountId: ""
+  r2AccessKeyId: ""
+  r2SecretAccessKey: ""
+  r2Bucket: ""
+  r2Endpoint: ""
+  r2PublicBaseUrl: ""

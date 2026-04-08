@@ -1,0 +1,573 @@
+---
+interface Props {
+  title: string;
+  description: string;
+  actionLabel: string;
+  locale: "en" | "zh" | "ja";
+  labels?: {
+    email?: string;
+    password?: string;
+    signInWithGoogle?: string;
+    signUpWithGoogle?: string;
+    signInWithPasskey?: string;
+    signUpWithPasskey?: string;
+    separatorOr?: string;
+    sendCode?: string;
+    signInWithPassword?: string;
+    createAccountWithPassword?: string;
+    sending?: string;
+    resendInSeconds?: string;
+    successDefault?: string;
+    emailRequired?: string;
+    emailFirst?: string;
+    csrfInitFailed?: string;
+    requestFailed?: string;
+    requestFailedSendCode?: string;
+    verificationCodeSent?: string;
+    forgotDevResetLinkPrefix?: string;
+    passkeyFlowFailed?: string;
+    passkeyPrepareFailed?: string;
+    passkeyAuthFailed?: string;
+  };
+  endpoint?: string;
+  requiresEmail?: boolean;
+  requiresPassword?: boolean;
+  extraFields?: Array<{
+    name: string;
+    label: string;
+    type?: "text" | "password" | "email" | "number";
+    placeholder?: string;
+    value?: string;
+    hidden?: boolean;
+  }>;
+  successRedirect?: string;
+  successMessage?: string;
+  links?: Array<{ href: string; label: string }>;
+  mode?: "sign-in" | "sign-up" | "generic";
+}
+
+const {
+  title,
+  description,
+  actionLabel,
+  locale,
+  labels = {},
+  endpoint = "",
+  requiresEmail = true,
+  requiresPassword = true,
+  extraFields = [],
+  successRedirect = "/admin",
+  successMessage = "",
+  links = [],
+  mode = "generic",
+} = Astro.props;
+
+const localTextMap = {
+  en: {
+    email: "Email",
+    password: "Password",
+    signInWithGoogle: "Sign in with Google",
+    signUpWithGoogle: "Sign up with Google",
+    signInWithPasskey: "Sign in with Passkey",
+    signUpWithPasskey: "Sign up with Passkey",
+    separatorOr: "Or",
+    sendCode: "Send code",
+    signInWithPassword: "Sign In with Password",
+    createAccountWithPassword: "Create Account with Password",
+    sending: "Sending...",
+    resendInSeconds: "Resend ({seconds}s)",
+    successDefault: "Success. Please check your email for next steps.",
+    emailRequired: "Email is required",
+    emailFirst: "Please enter email first.",
+    csrfInitFailed: "Failed to initialize CSRF token",
+    requestFailed: "Request failed",
+    requestFailedSendCode: "Failed to send verification code",
+    verificationCodeSent: "Verification code sent. Check server logs in development.",
+    forgotDevResetLinkPrefix: "Development reset link:",
+    passkeyFlowFailed: "Passkey flow failed",
+    passkeyPrepareFailed: "Failed to prepare passkey flow",
+    passkeyAuthFailed: "Passkey authentication failed",
+  },
+  zh: {
+    email: "邮箱",
+    password: "密码",
+    signInWithGoogle: "使用 Google 登录",
+    signUpWithGoogle: "使用 Google 注册",
+    signInWithPasskey: "使用 Passkey 登录",
+    signUpWithPasskey: "使用 Passkey 注册",
+    separatorOr: "或",
+    sendCode: "发送验证码",
+    signInWithPassword: "使用密码登录",
+    createAccountWithPassword: "使用密码创建账户",
+    sending: "发送中...",
+    resendInSeconds: "{seconds} 秒后重发",
+    successDefault: "操作成功，请查看邮箱后继续。",
+    emailRequired: "邮箱不能为空",
+    emailFirst: "请先输入邮箱。",
+    csrfInitFailed: "初始化 CSRF 令牌失败",
+    requestFailed: "请求失败",
+    requestFailedSendCode: "发送验证码失败",
+    verificationCodeSent: "验证码已发送。开发环境可在服务端日志查看。",
+    forgotDevResetLinkPrefix: "开发环境重置链接：",
+    passkeyFlowFailed: "Passkey 流程失败",
+    passkeyPrepareFailed: "初始化 Passkey 流程失败",
+    passkeyAuthFailed: "Passkey 验证失败",
+  },
+  ja: {
+    email: "メール",
+    password: "パスワード",
+    signInWithGoogle: "Google でサインイン",
+    signUpWithGoogle: "Google でサインアップ",
+    signInWithPasskey: "Passkey でサインイン",
+    signUpWithPasskey: "Passkey でサインアップ",
+    separatorOr: "または",
+    sendCode: "コード送信",
+    signInWithPassword: "パスワードでサインイン",
+    createAccountWithPassword: "パスワードでアカウント作成",
+    sending: "送信中...",
+    resendInSeconds: "{seconds}秒後に再送",
+    successDefault: "成功しました。次の手順はメールをご確認ください。",
+    emailRequired: "メールは必須です",
+    emailFirst: "先にメールを入力してください。",
+    csrfInitFailed: "CSRF トークンの初期化に失敗しました",
+    requestFailed: "リクエストに失敗しました",
+    requestFailedSendCode: "認証コードの送信に失敗しました",
+    verificationCodeSent: "認証コードを送信しました。開発環境ではサーバーログを確認してください。",
+    forgotDevResetLinkPrefix: "開発用リセットリンク：",
+    passkeyFlowFailed: "Passkey フローに失敗しました",
+    passkeyPrepareFailed: "Passkey フローの準備に失敗しました",
+    passkeyAuthFailed: "Passkey 認証に失敗しました",
+  },
+} as const;
+
+const localText = {
+  ...localTextMap[locale],
+  ...labels,
+};
+---
+
+<div class="container mx-auto flex min-h-[calc(100svh-4rem)] px-4 py-12">
+  <section class="mx-auto flex w-full max-w-sm flex-col justify-center gap-6">
+    <div class="flex flex-col gap-2 text-center">
+      <h1 class="text-2xl font-semibold tracking-tight text-foreground">{title}</h1>
+      <p class="text-sm text-muted-foreground">{description}</p>
+    </div>
+
+    <section class="rounded-xl border border-border bg-card p-6 text-card-foreground shadow-sm">
+      {mode !== "generic" ? (
+        <div class="space-y-4">
+          <a
+            class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground"
+            href="/api/v1/auth/sso/google/start"
+          >
+            {mode === "sign-in" ? localText.signInWithGoogle : localText.signUpWithGoogle}
+          </a>
+          <button
+            class="inline-flex h-10 w-full items-center justify-center rounded-md border border-input bg-background px-4 text-sm font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground"
+            type="button"
+            data-action="passkey"
+          >
+            {mode === "sign-in" ? localText.signInWithPasskey : localText.signUpWithPasskey}
+          </button>
+          <div class="relative py-1">
+            <div class="absolute inset-0 flex items-center"><span class="w-full border-t border-border"></span></div>
+            <div class="relative flex justify-center text-xs uppercase"><span class="bg-card px-2 text-muted-foreground">{localText.separatorOr}</span></div>
+          </div>
+        </div>
+      ) : null}
+
+      <form
+        class="mt-4 space-y-4"
+        data-endpoint={endpoint}
+        data-success-redirect={successRedirect}
+        data-success-message={successMessage}
+        data-auth-mode={mode}
+        data-sending-label={localText.sending}
+        data-resend-label-template={localText.resendInSeconds}
+        data-success-default-label={localText.successDefault}
+        data-email-required-label={localText.emailRequired}
+        data-email-first-label={localText.emailFirst}
+        data-csrf-failed-label={localText.csrfInitFailed}
+        data-request-failed-label={localText.requestFailed}
+        data-send-code-label={localText.sendCode}
+        data-send-code-failed-label={localText.requestFailedSendCode}
+        data-send-code-success-label={localText.verificationCodeSent}
+        data-forgot-reset-link-prefix={localText.forgotDevResetLinkPrefix}
+        data-passkey-flow-failed-label={localText.passkeyFlowFailed}
+        data-passkey-prepare-failed-label={localText.passkeyPrepareFailed}
+        data-passkey-auth-failed-label={localText.passkeyAuthFailed}
+      >
+        {requiresEmail ? (
+          <label class="block">
+            <span class="mb-2 block text-sm font-medium text-foreground">{localText.email}</span>
+            <input
+              class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
+              type="email"
+              name="email"
+              placeholder="name@example.com"
+              required
+              autocomplete="email"
+            />
+          </label>
+        ) : null}
+        {extraFields.map((field) => (
+          field.hidden ? (
+            <input type="hidden" name={field.name} value={field.value || ""} />
+          ) : (
+            <label class="block">
+              <span class="mb-2 block text-sm font-medium text-foreground">{field.label}</span>
+              {field.name === "verify_code" ? (
+                <div class="flex gap-2">
+                  <input
+                    class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
+                    type={field.type || "text"}
+                    name={field.name}
+                    placeholder={field.placeholder || ""}
+                    value={field.value || undefined}
+                    autocomplete="one-time-code"
+                  />
+                  <button
+                    class="h-10 shrink-0 rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
+                    type="button"
+                    data-action="send-verification-code"
+                  >
+                    {localText.sendCode}
+                  </button>
+                </div>
+              ) : (
+                <input
+                  class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
+                  type={field.type || "text"}
+                  name={field.name}
+                  placeholder={field.placeholder || ""}
+                  value={field.value || undefined}
+                />
+              )}
+            </label>
+          )
+        ))}
+        {requiresPassword ? (
+          <label class="block">
+            <span class="mb-2 block text-sm font-medium text-foreground">{localText.password}</span>
+            <input
+              class="h-10 w-full rounded-md border border-input bg-background px-3 text-sm text-foreground outline-none transition focus:ring-2 focus:ring-ring/30"
+              type="password"
+              name="password"
+              placeholder="••••••••"
+              required
+              autocomplete="current-password"
+            />
+          </label>
+        ) : null}
+        <p class="hidden text-sm text-emerald-600" data-role="success"></p>
+        <p class="hidden text-sm text-destructive" data-role="error"></p>
+        <button class="h-10 w-full rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition hover:opacity-90" type="submit">
+          {mode === "sign-in" ? labels.signInWithPassword || actionLabel : mode === "sign-up" ? labels.createAccountWithPassword || actionLabel : actionLabel}
+        </button>
+        {links.length ? (
+          <div class="flex flex-wrap justify-center gap-3 text-sm text-muted-foreground">
+            {links.map((item) => (
+              <a href={item.href} class="underline underline-offset-4 hover:text-foreground">{item.label}</a>
+            ))}
+          </div>
+        ) : null}
+      </form>
+    </section>
+  </section>
+</div>
+
+<script>
+  function getCookie(name: string) {
+    const encoded = `${encodeURIComponent(name)}=`;
+    const parts = document.cookie.split("; ");
+    for (const part of parts) {
+      if (part.startsWith(encoded)) {
+        return decodeURIComponent(part.slice(encoded.length));
+      }
+    }
+    return null;
+  }
+
+  function randomUUID(): string {
+    if (typeof crypto !== "undefined" && crypto.randomUUID) return crypto.randomUUID();
+    // RFC4122-ish fallback; good enough for idempotency keys in dev.
+    const bytes = new Uint8Array(16);
+    if (typeof crypto !== "undefined" && crypto.getRandomValues) crypto.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    const hex = Array.from(bytes, (b) => b.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+
+  function buildIdempotencyKey(): string {
+    // Some endpoints enforce idempotency key format, so keep it short + safe.
+    return `web_${randomUUID()}`;
+  }
+
+  async function ensureCSRFToken(): Promise<string | null> {
+    const cookieName = "go_astro_csrf";
+    const existing = getCookie(cookieName);
+    if (existing) return existing;
+
+    const resp = await fetch("/api/v1/auth/csrf", {
+      method: "GET",
+      credentials: "include",
+      headers: { "Content-Type": "application/json" },
+    });
+    if (!resp.ok) return null;
+    const body = await resp.json().catch(() => null);
+    return body?.data?.token || getCookie(cookieName);
+  }
+
+  function setMessage(form: HTMLFormElement, role: "error" | "success", message: string) {
+    const el = form.querySelector(`[data-role='${role}']`);
+    if (!(el instanceof HTMLElement)) return;
+    el.textContent = message || "";
+    el.classList.toggle("hidden", !message);
+  }
+
+  function setButtonBusy(btn: HTMLButtonElement, busy: boolean) {
+    btn.disabled = Boolean(busy);
+    btn.dataset.busy = busy ? "true" : "false";
+  }
+
+  function setFormBusy(form: HTMLFormElement, busy: boolean) {
+    const btn = form.querySelector("button[type='submit']");
+    if (!(btn instanceof HTMLButtonElement)) return;
+    if (!btn.dataset.originalLabel) {
+      btn.dataset.originalLabel = btn.textContent || "";
+    }
+    if (busy) {
+      btn.textContent = form.dataset.sendingLabel || "Sending...";
+      setButtonBusy(btn, true);
+      form.setAttribute("aria-busy", "true");
+    } else {
+      btn.textContent = btn.dataset.originalLabel || btn.textContent || "";
+      setButtonBusy(btn, false);
+      form.removeAttribute("aria-busy");
+    }
+  }
+
+  async function sendVerificationCode(form: HTMLFormElement, button: HTMLButtonElement) {
+    const emailInput = form.querySelector("input[name='email']");
+    if (!(emailInput instanceof HTMLInputElement) || !emailInput.value.trim()) {
+      setMessage(form, "error", "Please enter your email first.");
+      return;
+    }
+
+    setMessage(form, "error", "");
+    setMessage(form, "success", "");
+    setButtonBusy(button, true);
+
+    try {
+      const csrfToken = await ensureCSRFToken();
+      if (!csrfToken) throw new Error(form.dataset.csrfFailedLabel || "Failed to initialize CSRF token");
+
+      const res = await fetch("/api/v1/auth/resend-verification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRF-Token": csrfToken,
+          "Idempotency-Key": buildIdempotencyKey(),
+          "X-Tenant-ID": "default",
+        },
+        credentials: "include",
+        body: JSON.stringify({ email: emailInput.value.trim(), captcha_token: "dev-pass" }),
+      });
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        const msg =
+          (typeof body?.error === "string" && body.error) ||
+          body?.error?.message ||
+          form.dataset.sendCodeFailedLabel || "Failed to send verification code";
+        throw new Error(msg);
+      }
+      setMessage(form, "success", form.dataset.sendCodeSuccessLabel || "Verification code sent.");
+
+      // 30s cooldown to avoid accidental spam. Server-side rate limiting still applies.
+      const original = button.textContent || form.dataset.sendCodeLabel || "Send code";
+      let remaining = 30;
+      const tick = () => {
+        remaining -= 1;
+        if (remaining <= 0) {
+          button.textContent = original;
+          button.disabled = false;
+          return;
+        }
+        const resendTpl = form.dataset.resendLabelTemplate || "Resend ({seconds}s)";
+        button.textContent = resendTpl.replace("{seconds}", String(remaining));
+        button.disabled = true;
+        window.setTimeout(tick, 1000);
+      };
+      const resendTpl = form.dataset.resendLabelTemplate || "Resend ({seconds}s)";
+      button.textContent = resendTpl.replace("{seconds}", String(remaining));
+      window.setTimeout(tick, 1000);
+    } catch (err) {
+      setMessage(form, "error", err instanceof Error ? err.message : form.dataset.sendCodeFailedLabel || "Failed to send verification code");
+    } finally {
+      // If cooldown started, it will keep the button disabled; otherwise re-enable here.
+      if (button.textContent === (form.dataset.sendCodeLabel || "Send code")) setButtonBusy(button, false);
+    }
+  }
+
+  document.querySelectorAll("form[data-endpoint]").forEach((form) => {
+    const authMode = form instanceof HTMLFormElement ? form.dataset.authMode : "";
+    form.addEventListener("submit", async (event) => {
+      event.preventDefault();
+      const currentForm = event.currentTarget;
+      if (!(currentForm instanceof HTMLFormElement)) {
+        return;
+      }
+
+      const endpointValue = currentForm.dataset.endpoint;
+      if (!endpointValue) {
+        return;
+      }
+      const redirectRaw = currentForm.dataset.successRedirect;
+      // If attribute is omitted, fallback to /admin. If it's present but empty, do not redirect.
+      const redirectTo = redirectRaw === undefined ? "/admin" : redirectRaw;
+      const successMsg = currentForm.dataset.successMessage || "";
+
+      setMessage(currentForm, "error", "");
+      setMessage(currentForm, "success", "");
+      setFormBusy(currentForm, true);
+
+      const formData = new FormData(currentForm);
+      const payload: Record<string, string> = {
+        email: String(formData.get("email") || "").trim(),
+        password: String(formData.get("password") || ""),
+        captcha_token: "dev-pass",
+      };
+      formData.forEach((value, key) => {
+        if (key === "email" || key === "password") {
+          return;
+        }
+        payload[key] = String(value || "");
+      });
+      if (!payload.password) {
+        delete payload.password;
+      }
+      if (typeof payload.new_password === "string" && payload.new_password) {
+        payload.password = payload.new_password;
+      }
+
+      try {
+        if (currentForm.querySelector("input[name='email']") && !payload.email) {
+          throw new Error(currentForm.dataset.emailRequiredLabel || "Email is required");
+        }
+
+        const csrfToken = await ensureCSRFToken();
+        if (!csrfToken) {
+          throw new Error(currentForm.dataset.csrfFailedLabel || "Failed to initialize CSRF token");
+        }
+
+        const response = await fetch(endpointValue, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "X-CSRF-Token": csrfToken,
+            "Idempotency-Key": buildIdempotencyKey(),
+            "X-Tenant-ID": "default",
+          },
+          credentials: "include",
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const body = await response.json().catch(() => null);
+          const msg =
+            (typeof body?.error === "string" && body.error) ||
+            body?.error?.message ||
+            currentForm.dataset.requestFailedLabel || "Request failed";
+          throw new Error(msg);
+        }
+
+        if (redirectTo) {
+          window.location.href = redirectTo;
+        } else {
+          const maybeResult = (await response.json().catch(() => null)) as { data?: { result?: { reset_url?: string } } } | null;
+          const resetURL = maybeResult?.data?.result?.reset_url || "";
+          const prefix = currentForm.dataset.forgotResetLinkPrefix || "Development reset link:";
+          const withDevURL =
+            typeof resetURL === "string" && resetURL.trim()
+              ? `${successMsg || currentForm.dataset.successDefaultLabel || "Success. Please check your email for next steps."}\n${prefix} ${resetURL}`
+              : successMsg || currentForm.dataset.successDefaultLabel || "Success. Please check your email for next steps.";
+          setMessage(
+            currentForm,
+            "success",
+            withDevURL,
+          );
+        }
+      } catch (error) {
+        setMessage(currentForm, "error", error instanceof Error ? error.message : "Request failed");
+      } finally {
+        // If we redirected, this won't matter. Otherwise re-enable the submit button.
+        setFormBusy(currentForm, false);
+      }
+    });
+
+    const sendBtn = form.querySelector("[data-action='send-verification-code']");
+    if (sendBtn instanceof HTMLButtonElement) {
+      sendBtn.addEventListener("click", () => {
+        if (form instanceof HTMLFormElement) {
+          void sendVerificationCode(form, sendBtn);
+        }
+      });
+    }
+
+    const passkeyBtn = form.querySelector("[data-action='passkey']");
+    if (passkeyBtn instanceof HTMLButtonElement) {
+      passkeyBtn.addEventListener("click", async () => {
+        if (!(form instanceof HTMLFormElement)) return;
+        const emailInput = form.querySelector("input[name='email']");
+        const email = emailInput instanceof HTMLInputElement ? emailInput.value.trim() : "";
+        if (!email) {
+          setMessage(form, "error", form.dataset.emailFirstLabel || "Please enter email first.");
+          return;
+        }
+        const endpointValue = authMode === "sign-up" ? "/api/v1/auth/passkey/register/options" : "/api/v1/auth/passkey/login/options";
+        const verifyEndpoint = authMode === "sign-up" ? "/api/v1/auth/passkey/register/verify" : "/api/v1/auth/passkey/login/verify";
+        try {
+          const csrfToken = await ensureCSRFToken();
+          if (!csrfToken) throw new Error(form.dataset.csrfFailedLabel || "Failed to initialize CSRF token");
+          const optionRes = await fetch(endpointValue, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": csrfToken,
+              "Idempotency-Key": buildIdempotencyKey(),
+              "X-Tenant-ID": "default",
+            },
+            credentials: "include",
+            body: JSON.stringify({ email }),
+          });
+          if (!optionRes.ok) {
+            const body = await optionRes.json().catch(() => null);
+            throw new Error(body?.error?.message || form.dataset.passkeyPrepareFailedLabel || "Failed to prepare passkey flow");
+          }
+          const verifyRes = await fetch(verifyEndpoint, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "X-CSRF-Token": csrfToken,
+              "Idempotency-Key": buildIdempotencyKey(),
+              "X-Tenant-ID": "default",
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              email,
+              response: { email, method: "mock_passkey" },
+            }),
+          });
+          if (!verifyRes.ok) {
+            const body = await verifyRes.json().catch(() => null);
+            throw new Error(body?.error?.message || form.dataset.passkeyAuthFailedLabel || "Passkey authentication failed");
+          }
+          window.location.href = "/dashboard";
+        } catch (error) {
+          setMessage(form, "error", error instanceof Error ? error.message : form.dataset.passkeyFlowFailedLabel || "Passkey flow failed");
+        }
+      });
+    }
+  });
+</script>

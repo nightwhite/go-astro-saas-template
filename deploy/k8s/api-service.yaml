@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: template-api
+  namespace: go-astro-template
+spec:
+  selector:
+    app: template-api
+  ports:
+    - name: http
+      port: 8080
+      targetPort: 8080
+

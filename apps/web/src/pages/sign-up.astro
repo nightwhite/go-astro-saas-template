@@ -1,0 +1,32 @@
+---
+import AppShellLayout from "../layouts/AppShellLayout.astro";
+import AuthShell from "../features/auth/components/AuthShell.astro";
+import { t } from "@/lib/i18n";
+import { resolveServerLocale } from "@/lib/locale";
+
+const locale = resolveServerLocale(Astro.request);
+const m = t(locale);
+---
+
+<AppShellLayout title={m.common.signUp} locale={locale} renderFooter={false}>
+  <AuthShell
+    title={m.auth.signUpTitle}
+    description={m.auth.signUpDescription}
+    actionLabel={m.auth.signUpAction}
+    locale={locale}
+    labels={{
+      createAccountWithPassword: m.auth.createAccountWithPassword,
+    }}
+    endpoint="/api/v1/auth/register"
+    extraFields={[
+      { name: "display_name", label: m.auth.displayName, placeholder: m.auth.displayName },
+      { name: "verify_code", label: m.auth.verificationCode, placeholder: m.auth.verificationCode },
+    ]}
+    successRedirect="/sign-in"
+    mode="sign-up"
+    links={[
+      { href: "/sign-in", label: m.auth.alreadyHaveAccount },
+      { href: "/verify-email", label: m.auth.needVerificationCode },
+    ]}
+  />
+</AppShellLayout>

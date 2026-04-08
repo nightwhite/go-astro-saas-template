@@ -1,0 +1,16 @@
+---
+import AppShellLayout from "../layouts/AppShellLayout.astro";
+import { TeamInviteFeature } from "@/features/teams/components/TeamInviteFeature";
+import { t } from "@/lib/i18n";
+import { resolveServerLocale } from "@/lib/locale";
+
+const token = Astro.url.searchParams.get("token") || "";
+const locale = resolveServerLocale(Astro.request);
+const m = t(locale);
+---
+
+<AppShellLayout title={m.dashboard.teamInvite.pageTitle} locale={locale} renderFooter={false}>
+  <div class="page-shell py-8">
+    <TeamInviteFeature initialToken={token} locale={locale} client:load />
+  </div>
+</AppShellLayout>

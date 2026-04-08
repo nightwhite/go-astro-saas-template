@@ -1,0 +1,21 @@
+env:
+  appEnv: production
+  appBaseURL: https://template.local
+  webOrigin: https://template.local
+  securityEnablePprof: false
+
+api:
+  replicas: 3
+  maxReplicas: 8
+  autoscaling:
+    targetCPUUtilizationPercentage: 60
+
+web:
+  replicas: 3
+  autoscaling:
+    enabled: false
+
+worker:
+  replicas: 2
+  autoscaling:
+    enabled: false

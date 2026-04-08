@@ -1,0 +1,8 @@
+---
+import AppShellLayout from "../../layouts/AppShellLayout.astro";
+import { UITestHarness } from "../../components/testing/UITestHarness";
+---
+
+<AppShellLayout title="UI Test Harness" noindex={true} renderNav={false} enableSessionBootstrap={false}>
+  <UITestHarness client:load />
+</AppShellLayout>

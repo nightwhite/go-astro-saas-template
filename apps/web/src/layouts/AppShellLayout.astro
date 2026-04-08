@@ -1,0 +1,38 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import Navigation from "../components/layout/Navigation.astro";
+import Footer from "../components/layout/Footer.astro";
+import SessionBootstrap from "@/components/navigation/SessionBootstrap";
+import type { Locale } from "@/lib/i18n";
+
+interface Props {
+  title: string;
+  noindex?: boolean;
+  fullBleed?: boolean;
+  renderNav?: boolean;
+  renderFooter?: boolean;
+  enableSessionBootstrap?: boolean;
+  locale?: Locale;
+}
+
+const {
+  title,
+  noindex = false,
+  fullBleed = false,
+  renderNav = true,
+  renderFooter = true,
+  enableSessionBootstrap = true,
+  locale,
+} = Astro.props;
+---
+
+<BaseLayout title={title} noindex={noindex} locale={locale}>
+  <div class="flex min-h-screen flex-col">
+    {enableSessionBootstrap ? <SessionBootstrap client:load /> : null}
+    {renderNav ? <Navigation /> : null}
+    <main class:list={["flex-1", fullBleed ? "min-h-svh" : "page-shell py-6 md:py-8"]}>
+      <slot />
+    </main>
+    {renderFooter ? <Footer /> : null}
+  </div>
+</BaseLayout>

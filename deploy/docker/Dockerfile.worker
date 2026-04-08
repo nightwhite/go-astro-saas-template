@@ -1,0 +1,16 @@
+FROM golang:1.26.1-alpine AS builder
+WORKDIR /workspace
+COPY apps/api ./apps/api
+COPY go.work ./
+WORKDIR /workspace/apps/api
+RUN apk add --no-cache git
+RUN GOWORK=off GOPROXY=https://goproxy.cn,direct go mod download
+RUN CGO_ENABLED=0 GOWORK=off go build -o /out/worker ./cmd/worker
+
+FROM alpine:3.21
+RUN addgroup -S app && adduser -S app -G app
+WORKDIR /app
+COPY --from=builder /out/worker /app/worker
+USER app
+HEALTHCHECK --interval=30s --timeout=3s --retries=3 CMD pgrep -f /app/worker >/dev/null || exit 1
+CMD ["/app/worker"]

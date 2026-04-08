@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: template-web
+  namespace: go-astro-template
+spec:
+  selector:
+    app: template-web
+  ports:
+    - name: http
+      port: 4321
+      targetPort: 4321
+

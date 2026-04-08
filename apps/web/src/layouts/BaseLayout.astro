@@ -1,0 +1,52 @@
+---
+import "../styles/global.css";
+import { ClientRouter } from "astro:transitions";
+import { Toaster } from "@/components/ui/sonner";
+import { isLocale, type Locale } from "@/lib/i18n";
+import { resolveServerLocale } from "@/lib/locale";
+
+interface Props {
+  title: string;
+  noindex?: boolean;
+  locale?: Locale;
+}
+
+const { title, noindex = false, locale } = Astro.props;
+const resolvedLocale = locale && isLocale(locale) ? locale : resolveServerLocale(Astro.request);
+const themeBootstrapScript = String.raw`(() => {
+  const key = "theme";
+  const root = document.documentElement;
+  const getSystem = () => (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+  const getStored = () => {
+    try {
+      const value = localStorage.getItem(key);
+      if (value === "light" || value === "dark" || value === "system") return value;
+    } catch {}
+    return null;
+  };
+  const apply = (mode) => {
+    const resolved = mode === "system" ? getSystem() : mode;
+    root.classList.remove("light", "dark");
+    root.classList.add(resolved);
+    root.style.colorScheme = resolved;
+    root.setAttribute("data-theme", mode);
+  };
+  apply(getStored() ?? "dark");
+})();`;
+---
+
+<!doctype html>
+<html lang={resolvedLocale}>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{title}</title>
+    {noindex ? <meta name="robots" content="noindex,nofollow" /> : null}
+    <script is:inline set:html={themeBootstrapScript}></script>
+  </head>
+  <body>
+    <ClientRouter fallback="none" />
+    <slot />
+    <Toaster richColors closeButton position="top-right" expand duration={7000} />
+  </body>
+</html>

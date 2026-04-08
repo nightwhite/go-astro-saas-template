@@ -1,0 +1,14 @@
+---
+export const prerender = false;
+
+const rawPath = Astro.params.path ?? "";
+const segments = typeof rawPath === "string" && rawPath.length ? rawPath.split("/").filter(Boolean) : [];
+const current = segments[0] ?? "profile";
+if (current === "sessions") {
+  return Astro.redirect(`/dashboard/settings/sessions${Astro.url.search}`, 302);
+}
+if (current === "security") {
+  return Astro.redirect(`/dashboard/settings/security${Astro.url.search}`, 302);
+}
+return Astro.redirect(`/dashboard/settings${Astro.url.search}`, 302);
+---

@@ -1,0 +1,30 @@
+---
+import AppShellLayout from "./AppShellLayout.astro";
+import { AppSidebar } from "@/components/client/AppSidebar";
+import { PageHeader } from "@/components/page-header";
+import { defaultLocale, type Locale } from "@/lib/i18n";
+
+interface Props {
+  title: string;
+  currentPath: string;
+  breadcrumb: Array<{ href: string; label: string }>;
+  locale?: Locale;
+}
+
+const { title, currentPath, breadcrumb, locale } = Astro.props;
+const resolvedLocale = locale ?? defaultLocale;
+---
+
+<AppShellLayout title={title} fullBleed={true} locale={locale} renderNav={false} renderFooter={false}>
+  <div class="min-h-svh bg-background text-foreground">
+    <div class="flex min-h-svh">
+      <AppSidebar client:load transition:persist currentPath={currentPath} locale={resolvedLocale} />
+      <div class="flex min-w-0 flex-1 flex-col">
+        <PageHeader client:load transition:persist items={breadcrumb} currentPath={currentPath} locale={resolvedLocale} />
+        <main class="min-h-0 flex-1 overflow-auto p-4 md:p-6 lg:p-8">
+          <slot />
+        </main>
+      </div>
+    </div>
+  </div>
+</AppShellLayout>

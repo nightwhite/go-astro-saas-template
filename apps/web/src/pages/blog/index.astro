@@ -1,0 +1,48 @@
+---
+import AppShellLayout from "../../layouts/AppShellLayout.astro";
+import { fetchPublishedPosts, selectTranslation } from "@/lib/blog";
+import { resolveServerLocale } from "@/lib/locale";
+import { t } from "@/lib/i18n";
+
+export const prerender = false;
+
+const locale = resolveServerLocale(Astro.request);
+const m = t(locale);
+const posts = await fetchPublishedPosts(locale).catch(() => []);
+---
+
+<AppShellLayout title={`${m.nav.blog} | SaaS Template`} locale={locale}>
+  <div class="mx-auto max-w-5xl px-6 py-12">
+    <div class="flex items-end justify-between gap-4">
+      <div>
+        <h1 class="text-3xl font-bold">{m.blog.title}</h1>
+        <p class="mt-2 text-sm text-muted-foreground">{m.blog.subtitle}</p>
+      </div>
+    </div>
+
+    {posts.length ? (
+      <div class="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+        {posts.map((post) => {
+          const translation = selectTranslation(post, locale);
+          if (!translation) return null;
+          return (
+            <a
+              class="group rounded-xl border border-border bg-card p-5 text-card-foreground shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+              href={`/blog/${post.slug}`}
+            >
+              <div class="text-sm font-semibold group-hover:underline">{translation.title}</div>
+              {translation.excerpt ? <div class="mt-2 line-clamp-3 text-sm text-muted-foreground">{translation.excerpt}</div> : null}
+              <div class="mt-4 text-xs text-muted-foreground">
+                {post.published_at ? new Date(post.published_at).toLocaleDateString(locale) : ""}
+              </div>
+            </a>
+          );
+        })}
+      </div>
+    ) : (
+      <div class="mt-10 rounded-xl border border-dashed border-border bg-muted/40 p-8 text-sm text-muted-foreground">
+        {m.blog.noPosts}
+      </div>
+    )}
+  </div>
+</AppShellLayout>

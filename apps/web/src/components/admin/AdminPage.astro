@@ -1,0 +1,21 @@
+---
+import type { AdminOverview } from "@/features/dashboard/api/admin";
+import AdminApp from "./AdminApp";
+
+interface Props {
+  overview: AdminOverview | null;
+  currentPath: string;
+  breadcrumb: string[];
+}
+
+const { overview, currentPath, breadcrumb } = Astro.props;
+---
+
+<AdminApp
+  client:load
+  overview={overview}
+  currentPath={currentPath}
+  breadcrumb={breadcrumb}
+>
+  <slot />
+</AdminApp>

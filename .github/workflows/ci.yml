@@ -1,0 +1,145 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  api-unit:
+    name: API Unit
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Go Test
+        run: GOWORK=off go test ./...
+        working-directory: apps/api
+
+  web-check-build:
+    name: Web Check and Build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Astro Check
+        run: npm run check -w apps/web
+
+      - name: Build Web
+        run: npm run build -w apps/web
+
+  deploy-check:
+    name: Deploy Check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Deploy Check
+        run: sh scripts/deploy-check.sh
+
+  integration-smoke:
+    name: Integration Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.26.x"
+          cache-dependency-path: apps/api/go.sum
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: package-lock.json
+
+      - name: Install Dependencies
+        run: npm ci
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps chromium
+        working-directory: apps/web
+
+      - name: Go Mod Download
+        run: GOWORK=off go mod download
+        working-directory: apps/api
+
+      - name: Start Devstack
+        run: |
+          nohup go run ./cmd/devstack > /tmp/devstack.log 2>&1 &
+          echo $! > /tmp/devstack.pid
+        working-directory: apps/api
+
+      - name: Wait for API
+        run: |
+          for i in $(seq 1 240); do
+            if curl -fsS http://127.0.0.1:18080/readyz >/dev/null; then
+              exit 0
+            fi
+            sleep 0.5
+          done
+          echo "api not ready"
+          cat /tmp/devstack.log || true
+          exit 1
+
+      - name: Explain Check
+        run: sh scripts/explain-check.sh http://127.0.0.1:18080
+
+      - name: API Contract Test
+        run: GOWORK=off go test ./internal/server/routes -run 'TestAPIContract' -count=1
+        working-directory: apps/api
+
+      - name: Perf Smoke
+        run: COUNT_LOGIN=9 COUNT_ADMIN=5 SKIP_EXPLAIN_CHECK=1 sh scripts/perf-baseline.sh http://127.0.0.1:18080
+
+      - name: E2E Smoke
+        run: npm run test:e2e -w apps/web
+        env:
+          APP_BASE_URL: http://127.0.0.1:18080
+
+      - name: Cleanup Devstack
+        if: always()
+        run: |
+          if [ -f /tmp/devstack.pid ]; then
+            kill "$(cat /tmp/devstack.pid)" || true
+          fi
+
+  check:
+    name: check
+    runs-on: ubuntu-latest
+    needs:
+      - api-unit
+      - web-check-build
+      - deploy-check
+      - integration-smoke
+    steps:
+      - name: All checks passed
+        run: echo "all checks passed"

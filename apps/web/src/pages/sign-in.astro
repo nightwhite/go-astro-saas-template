@@ -1,0 +1,28 @@
+---
+import AppShellLayout from "../layouts/AppShellLayout.astro";
+import AuthShell from "../features/auth/components/AuthShell.astro";
+import { t } from "@/lib/i18n";
+import { resolveServerLocale } from "@/lib/locale";
+
+const locale = resolveServerLocale(Astro.request);
+const m = t(locale);
+---
+
+<AppShellLayout title={m.common.signIn} locale={locale} renderFooter={false}>
+  <AuthShell
+    title={m.auth.signInTitle}
+    description={m.auth.signInDescription}
+    actionLabel={m.auth.signInAction}
+    locale={locale}
+    labels={{
+      signInWithPassword: m.auth.signInWithPassword,
+    }}
+    endpoint="/api/v1/auth/login"
+    successRedirect="/dashboard"
+    mode="sign-in"
+    links={[
+      { href: "/forgot-password", label: m.common.forgotPassword },
+      { href: "/sign-up", label: m.auth.createAccount },
+    ]}
+  />
+</AppShellLayout>

@@ -1,0 +1,21 @@
+---
+const items = [
+  { href: "/", label: "Home" },
+  { href: "/dashboard", label: "Dashboard" },
+  { href: "/dashboard/teams", label: "Teams" },
+  { href: "/dashboard/billing", label: "Billing" },
+  { href: "/dashboard/marketplace", label: "Marketplace" },
+  { href: "/settings", label: "Settings" },
+  { href: "/team-invite", label: "Team Invite" },
+  { href: "/account", label: "Account" },
+  { href: "/admin", label: "Admin" },
+];
+---
+
+<nav class="flex flex-wrap items-center gap-3">
+  {items.map((item) => (
+    <a class="inline-flex h-9 items-center rounded-md border border-input bg-background px-3 text-sm font-medium text-foreground transition hover:bg-accent hover:text-accent-foreground" href={item.href}>
+      {item.label}
+    </a>
+  ))}
+</nav>

@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: template-worker
+  namespace: go-astro-template
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: template-worker
+  template:
+    metadata:
+      labels:
+        app: template-worker
+    spec:
+      containers:
+        - name: worker
+          image: ghcr.io/example/go-astro-template-worker:latest
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+
